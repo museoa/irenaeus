@@ -24,6 +24,7 @@
 
 
 #include <string>
+#include <vector>
 #include <swmgr.h>
 #include <swdisp.h>
 #include <versekey.h>
@@ -48,12 +49,20 @@ struct moduledef
 typedef list<moduledef> moduledeflist;
 typedef list<string> stringlist;
 
+struct versedat
+{
+  int row;
+  int col;
+};
+
+
 struct windat
 {
   WINDOW *textWindow;
   string modname;
   string keyname;
   stringlist *_searchresult;
+  vector<versedat> verseinfo;
   int top_x;
   int top_y;
   int porty;
@@ -62,6 +71,7 @@ struct windat
   int basey;
   int objecttype;
 };
+
 
 
 class ioMgr
@@ -79,26 +89,21 @@ class ioMgr
  public:
   ioMgr(int t);
   int getnextchar(string inputstring,unsigned int pos);
-  string querystr(string str1,string inputstring,unsigned int pos);
   int queryint(string str1,string inputstring,unsigned int pos);
-  void displaymessage(string mess);
-  void printwindow(string text,int winnum);
-  void panner(int num,int c);
+  string querystr(string str1,string inputstring,unsigned int pos);
   void panner(int c);
-  void drawscreen();
+  void panner(int num,int c);
   void modchanged();
   string drawmenu(moduledeflist *_moduleList);
-  void Display(SWModule &imodule,VerseKey *endvkey);
-  void Display(SWModule &imodule);
   void updateDisplay(SWModule &imodule);
-  void displayverse(string Text);
-  void displaysearch(string Text);
+  void Display(SWModule &imodule);
+  void Display(SWModule &imodule,VerseKey *endvkey);
   VerseKey gettopsearch();
+  void displaysearch(string Text);
   void clearsearch();
-  void switchvirwin(int wn);
-  void popwin(string msg);
-  int getvnum();
   void setvnum(int vn);
+  int getvnum();
+  void popwin(string msg);
   void setobjecttype(int mnum,int objtype);
   void setinputtype(int inptyp);
   int getinputtype();
@@ -106,7 +111,6 @@ class ioMgr
   void changewindowbottom(int winnum,int value);
   void changewindowleft(int winnum,int value);
   void changewindowright(int winnum,int value);
-
 };
 
 
@@ -144,22 +148,20 @@ public:
 	void initSWORD();
 	void lookupTextChanged(int vnum,string text);
 	void lookupTextChanged(string text);
-	void searchButtonClicked(int vnum,string response);
-	void searchButtonClicked(string response);
 	void viewModActivate(int vnum,const char *modName);
 	void viewModActivate(const char *modName);
-	void navigateButtonClicked(int direction);
-	void resultListSelectionChanged(char *clist, int row, int column);
-	moduledeflist *getModuleList();
 	string listmodules(string mtype);
+	void PersonalCommentAdd(const string &modName, const string &startVerse, const string &stopVerse, const string &comment);
+	void PersonalCommentRemove(const string &modName, const string &startVerse, const string &stopVerse);
 	string getcurverse();
 	int linkscr(int l1,int l2,int val);
 	int getlink(int l1,int l2);
 	void clearlink(int l1);
 	void switchvirmod(int mn);
-	void AddRenderFilters(SWModule *module, ConfigEntMap &section);
-	void PersonalCommentAdd(const string &modName, const string &startVerse, const string &stopVerse, const string &comment);
-	void PersonalCommentRemove(const string &modName, const string &startVerse, const string &stopVerse);
+	void navigateButtonClicked(int direction);
+	void searchButtonClicked(string response);
+	void searchButtonClicked(int vnum,string response);
+	moduledeflist *getModuleList();
 	void setsearchType(int st);
 	void setsearchParams(int sp);
 	int getsearchType();

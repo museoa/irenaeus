@@ -4,6 +4,24 @@ install by running:
 
 configure
 make
+make install
+
+then run:
+
+irenaeus
+
+
+When it starts up you will notice text flash on the screen briefly.
+The way the program is set up, there are a number of 'virtual screens'
+you can switch between them using the number keys.  The '?' key should 
+show a list of the keybindings, and what the keys do.  You can look
+up verses (l), do searches (s), change modules (m), navigate through
+text (p/n,-/+,_/= do previous/next book,chapter,verse)
+Some scripting is supported.
+If you type r followed by the filename scripts/interlin1 then you
+will see an interlinear comparison of KJV,ASV, and BBE on screens 2,3,4
+(if they are in stalled).
+
 
 
 What are the advantages of a program like irenaeus.
@@ -26,21 +44,11 @@ and I get:
 
  James, a servant of God and of the Lord Jesus Christ, sends words of love to the twelve tribes of the Jews living in all parts of the earth.
 
-In particular I have written an emacs mode.  This means that you
+In particular I have written an emacs mode (sword.el).  This means that you
 can easily insert biblical reference while writing a file.
 
 in emacs I can type cntrl C, l, and then type James1:1, and get the verse 
 in my emacs buffer.
 
-Similarly you can do searches, read commentaries , write personal commentaries
-
-
-If I decided that I needed to do a regular expression search, but regular
-expresion searching isn't implemented yet, I can copy the entire bible to
-a buffer: cntrl C l, then gen1:1-Rev22:21  
-(I haven't actually tried this, but it should work)
-I then have my editor do the regular expression search.
-
-
-There is much work that should be done to the code.
+Similarly you can do searches, read commentaries 
 

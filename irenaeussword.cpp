@@ -235,7 +235,7 @@ void MainWindow::viewModActivate(const char *modName)
   for (i=0;i<NUMVWIN;i++)
     {
       tmp=linktable[modnum][i];
-      if((tmp&&3)==2)
+      if((tmp&3)==2)
 	{
 	  linklst[j]=i;
 	  j++;  
@@ -247,6 +247,108 @@ void MainWindow::viewModActivate(const char *modName)
       panner(linklst[i],0);
     }
 }
+
+
+string MainWindow::listmodules(string mtype)
+{
+    moduledeflist::iterator it;
+    string namelst;
+    string compstr;
+
+    compstr=mtype;
+    if (mtype=="1") compstr="Biblical Texts";
+    else 
+      if (mtype=="2") compstr="Commentaries";
+      else 
+	if (mtype=="3") compstr="Lexicons / Dictionaries";
+
+    for (it=_moduleList->begin(); it!=_moduleList->end(); it++)
+      {
+	if (it->type==compstr)
+	  namelst += it->name+" ";
+                //text = md->name + " (" + md->description + ")";
+      }
+    return namelst;
+}
+
+
+
+void MainWindow::PersonalCommentAdd(const string &modName, const string &startVerse, const string &stopVerse, const string &comment)
+{
+        ModMap::iterator        it;
+        SWModule             *commentModule = 0;
+        VerseKey             startKey=startVerse.c_str();;
+        VerseKey             stopKey=stopVerse.c_str();
+
+        it = mainMgr->Modules.find(modName.data());
+        if (it != mainMgr->Modules.end())
+        {
+                commentModule = (*it).second;
+
+                // should return Personal Commentary (or other RawFiles module)
+                cout<< "Module is %s" << commentModule->Name(); //debug
+
+	//startKey = startVerse.data();
+        //        stopKey = stopVerse.data();
+
+                commentModule->SetKey(startVerse.data()); // position mod to key                (*commentModule) << comment.data();   // set entry to comment
+		cout<<comment.data();
+                if ((*(SWKey *)*commentModule) < stopKey)
+                {
+                        (*commentModule)++;
+
+                        while ((*(SWKey *)*commentModule) <= stopKey)
+                        {
+                                (*commentModule) << startKey;   // link all subsequent verses to the comment at 'startKey'
+                                (*commentModule)++;
+                        }
+                }
+                if (commentModule == curMod)
+                        commentModule->Display();
+
+                cout<<"Added Comment";
+        } else
+                // debug("Module %s not found!", commentModule->Name());
+	  cout<<"Personal Commentary Module not found!";
+}
+
+
+void MainWindow::PersonalCommentRemove(const string &modName, const string &startVerse, const string &stopVerse)
+{
+  ModMap::iterator  it;
+  SWModule          *commentModule = 0;
+  VerseKey          startKey;
+  VerseKey          stopKey;
+  
+  it = mainMgr->Modules.find(modName.data());
+  if (it != mainMgr->Modules.end())
+    {
+      commentModule = (*it).second;
+      
+      // should return Personal Commentary (or other RawFiles module)
+      //debug("Module is %s", commentModule->Name());
+      
+      startKey = startVerse.data();
+      stopKey = stopVerse.data();
+      
+      commentModule->SetKey(startVerse.data()); // position mod to key                (*commentModule).Delete();   // remove entry
+      if ((*(SWKey *)*commentModule) < stopKey)
+	{
+	  (*commentModule)++;
+	  
+	  while ((*(SWKey *)*commentModule) <= stopKey)
+	    {
+	      (*commentModule).Delete();   // link all subsequent verses to the comment at 'startKey'
+	      (*commentModule)++;
+	    }
+	}
+                if (commentModule == curMod)
+		  commentModule->Display();
+    }
+}
+
+
+
 
 string MainWindow::getcurverse()
 { 
@@ -291,13 +393,23 @@ void MainWindow::clearlink(int l1)
 void MainWindow::switchvirmod(int nm)
 {
   ModMap::iterator it;
-  int i,tmpv;
+  int i,j=1,tmp; 
+ int linklst[NUMVWIN]; 
   VerseKey vKey;
   string text;
+  linklst[0]=nm;
   for (i=0;i<NUMVWIN;i++)
     {
-      tmpv=getlink(nm,i);
-    }
+      tmp=getlink(nm,i);
+      if ((tmp&4)==4)
+	{
+	  linklst[j]=i;
+	  j++;  
+	}
+    };
+ for (i=j-1;i>=0;i--)
+    { 
+     nm=linklst[i];
     it = mainMgr->Modules.find(modulename[nm]);
   if (it != mainMgr->Modules.end()) 
       curMod = (*it).second;
@@ -306,6 +418,7 @@ void MainWindow::switchvirmod(int nm)
   vKey =verkey[nm];
   text=((const char *) vKey);
   curMod->SetKey(text.c_str());
+}
 }
 
 
@@ -350,11 +463,13 @@ void MainWindow::navigateButtonClicked(int direction)
 	    switchvirmod(linklst[i]);
 	    verkey[linklst[i]]=vKey;
 	    lookupTextChanged(linklst[i],text);
-	    panner(linklst[i],0);
+	    //panner(linklst[i],0);
+	    panner(linklst[i],-vKey.Verse());
+	  
 	  }
       }
   }
-  panner(0); // make sure correct screen is on top.
+    panner(0); // make sure correct screen is on top.
 }            // TODO Really nead to keep track of how updates should be done.
 
 void MainWindow::searchButtonClicked(string srchText) { 

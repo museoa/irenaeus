@@ -79,28 +79,6 @@ FRAME
 
 static string helpstr;
 
-string MainWindow::listmodules(string mtype)
-{
-    moduledeflist::iterator it;
-    string namelst;
-    string compstr;
-
-    compstr=mtype;
-    if (mtype=="1") compstr="Biblical Texts";
-    else 
-      if (mtype=="2") compstr="Commentaries";
-      else 
-	if (mtype=="3") compstr="Lexicons / Dictionaries";
-
-    for (it=_moduleList->begin(); it!=_moduleList->end(); it++)
-      {
-	if (it->type==compstr)
-	  namelst += it->name+" ";
-                //text = md->name + " (" + md->description + ")";
-      }
-    return namelst;
-}
-
 
 string editfile(string fname)
 {
@@ -247,6 +225,13 @@ void commandloop(MainWindow *mw,int runmode,string inputstring, int pos)
 	case KEY_DOWN:  // pan downwards 
 	  mw->panner(KEY_DOWN);	  
 	  break;
+        case KEY_PPAGE:    // pan upwards 
+	  mw->panner(KEY_PPAGE);	  
+	  break;
+	case KEY_NPAGE:  // pan downwards 
+	  mw->panner(KEY_NPAGE);	  
+	  break;
+
         case KEY_LEFT:    // pan left 
 	  mw->panner(KEY_LEFT);	  
 	  break;
@@ -262,7 +247,7 @@ void commandloop(MainWindow *mw,int runmode,string inputstring, int pos)
 	case PREVIOUS_VERSE:	// '_'prev verse 
 	  mw->navigateButtonClicked(3);
 	  break;
-	case NEXT_VERSE:	// '=' next chapter 
+	case NEXT_VERSE:	// '=' next verse
 	  mw->navigateButtonClicked(4);
 	  break;
 	case NEXT_CHAP:	// '+' next chapter 
@@ -433,80 +418,6 @@ int main(int argc, char *argv[])
     return (EXIT_SUCCESS);
 }
 
-
-void MainWindow::PersonalCommentAdd(const string &modName, const string &startVerse, const string &stopVerse, const string &comment)
-{
-        ModMap::iterator        it;
-        SWModule             *commentModule = 0;
-        VerseKey             startKey=startVerse.c_str();;
-        VerseKey             stopKey=stopVerse.c_str();
-
-        it = mainMgr->Modules.find(modName.data());
-        if (it != mainMgr->Modules.end())
-        {
-                commentModule = (*it).second;
-
-                // should return Personal Commentary (or other RawFiles module)
-                cout<< "Module is %s" << commentModule->Name(); //debug
-
-	//startKey = startVerse.data();
-        //        stopKey = stopVerse.data();
-
-                commentModule->SetKey(startVerse.data()); // position mod to key                (*commentModule) << comment.data();   // set entry to comment
-		cout<<comment.data();
-                if ((*(SWKey *)*commentModule) < stopKey)
-                {
-                        (*commentModule)++;
-
-                        while ((*(SWKey *)*commentModule) <= stopKey)
-                        {
-                                (*commentModule) << startKey;   // link all subsequent verses to the comment at 'startKey'
-                                (*commentModule)++;
-                        }
-                }
-                if (commentModule == curMod)
-                        commentModule->Display();
-
-                cout<<"Added Comment";
-        } else
-                // debug("Module %s not found!", commentModule->Name());
-	  cout<<"Personal Commentary Module not found!";
-}
-
-
-void MainWindow::PersonalCommentRemove(const string &modName, const string &startVerse, const string &stopVerse)
-{
-  ModMap::iterator  it;
-  SWModule          *commentModule = 0;
-  VerseKey          startKey;
-  VerseKey          stopKey;
-  
-  it = mainMgr->Modules.find(modName.data());
-  if (it != mainMgr->Modules.end())
-    {
-      commentModule = (*it).second;
-      
-      // should return Personal Commentary (or other RawFiles module)
-      //debug("Module is %s", commentModule->Name());
-      
-      startKey = startVerse.data();
-      stopKey = stopVerse.data();
-      
-      commentModule->SetKey(startVerse.data()); // position mod to key                (*commentModule).Delete();   // remove entry
-      if ((*(SWKey *)*commentModule) < stopKey)
-	{
-	  (*commentModule)++;
-	  
-	  while ((*(SWKey *)*commentModule) <= stopKey)
-	    {
-	      (*commentModule).Delete();   // link all subsequent verses to the comment at 'startKey'
-	      (*commentModule)++;
-	    }
-	}
-                if (commentModule == curMod)
-		  commentModule->Display();
-    }
-}
 
 
 

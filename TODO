@@ -8,17 +8,16 @@ next release should have:
 		add support for greek and hebrew
         use filters
         finish write to personal commentary
-        help screen
+	more documentation
         fix bugs (numerous visual glitches)       
+            on some terminals, switching virtual windows, text from
+            previous window doesn't get cleared first.
 
 desire for later versions:
-more windowing
-implement the options available in the sword api: searching ranges, 
+better windowing
+implement more options available in the sword api: searching ranges, 
 regexpr search, 
 more mouse support
-maybe a preliminary Tcl interface if it is easy to do. 
-ability to choose a reference from search list or comm/ld/text, and 
-go to the verse
 catch up in terms of functionality to what bibletime can do.
 also compatibility with bibletime would be good (read config file?).
 

@@ -42,8 +42,8 @@ set_terminal_modes(void)
     keypad(stdscr, TRUE);
 }
 
-
-ioMgr::ioMgr(int t)
+                                // initialization
+ioMgr::ioMgr(int t)                // specify input type t
 {
   int i,j;
   vnum=0;       
@@ -57,22 +57,13 @@ ioMgr::ioMgr(int t)
     }
 	if (inputtype==0)
 	  {
-	    outlevel=1;
-	    initscr(); 
-	    for (i=0;i<NUMVWIN;i++)
-	      {
-		wd[i].top_x=1;	wd[i].top_y=1;
-		wd[i].porty=LINES-1;	wd[i].portx=COLS-2;
-		wd[i].basex=0;	wd[i].basey=1;
-		wd[i].textWindow  =newpad(1000,wd[i].portx-wd[i].top_x);  
-		keypad(wd[i].textWindow, TRUE);
-	      }
+	    outlevel=1; //outlevel is the default output amount: 1=chapter
+	    initscr();
 
-	    bkgdset(BLANK);
+	    bkgdset(BLANK);   //haven't implemented color yet
 	    start_color();
 	    set_terminal_modes();
 	    def_prog_mode();
-	    //drawscreen();
 	    start_color();
 	    hascolor=has_colors();
 	    if (hascolor)
@@ -83,10 +74,19 @@ ioMgr::ioMgr(int t)
 		init_pair(2,COLOR_GREEN,COLOR_BLACK); 
 		init_pair(3,COLOR_BLUE,COLOR_BLACK); 
 	      }
+	    
+	    for (i=0;i<NUMVWIN;i++)
+	      {
+		wd[i].top_x=1;	wd[i].top_y=1;
+		wd[i].porty=LINES-1;	wd[i].portx=COLS-2;
+		wd[i].basex=0;	wd[i].basey=1;
+		wd[i].textWindow  =newpad(300,wd[i].portx-wd[i].top_x);  
+		keypad(wd[i].textWindow, TRUE);
+	      }
 	  };	
 	if (inputtype==1)
 	  {
-	    outlevel=0;
+	    outlevel=0; // amount of output:0=verse 
 	    for (i=0;i<NUMVWIN;i++) wd[i].textWindow=NULL;
 	  }
 	if (inputtype==2)
@@ -101,7 +101,7 @@ int ioMgr::getnextchar(string inputstring,unsigned int pos)
 {
   int nchar;
   if (inputtype==0) 
-    nchar= getch();
+    nchar= getch();  //TODO use wgetch to implement more mouse support
   if (inputtype==1)
     {
       string st;
@@ -215,6 +215,7 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
   WINDOW *tempwin;
   bool scrollers = TRUE;
   int pxmax, pymax, lowend, highend;
+  versedat tmpvd;
   int top_x,top_y,porty,portx,basex,basey;
   if (inputtype==0) {
     top_x=wd[num].top_x;      top_y=wd[num].top_y;
@@ -247,6 +248,11 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
                 beep();
             break;
 
+      case KEY_PPAGE:	/* pan upwards */
+	basey-=porty-top_y-1;
+	if (basey <0) basey=0;
+	break;
+
       case KEY_UP:	/* pan upwards */
 	if (basey > 0)
 	  basey--;
@@ -259,7 +265,22 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
 	  beep();
 	break;
 
+      case KEY_NPAGE:	/* pan downwards */
+        basey+=porty-top_y-1;
+	if (basey + porty - (pxmax > portx) > pymax)
+	  basey=pymax;
+	break;
+
       default:
+	if (c<0)  // use neg number to indicate go to verse number
+	  {
+	    if (((-1-c)<wd[num].verseinfo.size())&((-1-c)>=0))
+	      {
+		tmpvd=wd[num].verseinfo[-1-c];
+		if ((tmpvd.row>=0)&(tmpvd.row<=pymax))
+		  basey=tmpvd.row;
+	      }
+	  };
 	//beep();
 	break;
       }
@@ -305,9 +326,9 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
     mvaddch(top_y - 1, portx - 1, ACS_URCORNER);
     mvaddch(porty , top_x - 1, ACS_LLCORNER);
     mvaddch(porty , portx - 1, ACS_LRCORNER);
-    
+	touchwin(tempwin);    
     wnoutrefresh(stdscr);
-    pnoutrefresh(tempwin,
+    prefresh(tempwin,
 		 basey, basex,
 		 top_y, top_x,
 		 porty - (pxmax > portx) - 1,
@@ -444,31 +465,12 @@ string ioMgr::drawmenu(moduledeflist *_moduleList)
 }
 
 
-
-/*
-static bool
-outs(char *s)
-{
-    if (valid(s)) {
-        tputs(s, 1, outc);
-        return TRUE;
-    }
-    return FALSE;
-}
-
-static int
-outc(int c)
-{
-  putc(c, stdout);
-  return 0;
-}
-*/
-
 void ioMgr::updateDisplay(SWModule &imodule) 
 {
   if ( wd[vnum].textWindow!=NULL)
     Display(imodule,NULL);
 }
+
 
 void ioMgr::Display(SWModule &imodule) 
 {
@@ -476,8 +478,10 @@ void ioMgr::Display(SWModule &imodule)
 }
 
 
-void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
+void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) 
+{
   int dcolumn=1;
+  int drow=1;
   int i;
   unsigned int pos,pos2;
   string line;
@@ -486,11 +490,11 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
   int cwidth;
   char c1;
   char versenum[4];
-
+  versedat vdat1;
   string tmpType;
 
   tmpType=imodule.Type();
-
+  wd[vnum].verseinfo.clear();
   /* get module name */
   wd[vnum].modname=imodule.Name(); 
   
@@ -501,6 +505,9 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
     {
       wclear(wd[vnum].textWindow);
       wmove(wd[vnum].textWindow,1,1);
+      vdat1.row=drow;
+      vdat1.col=dcolumn;
+      wd[vnum].verseinfo.push_back(vdat1);
     }
   
   // set recent Key
@@ -545,29 +552,11 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
 	  sprintf(versenum,"%d", key->Verse());
 	  // if (!hascolor) // XXX I want to add color and remove []
 	  //  {
-	      linestr="[";
-	      linestr+=versenum;
-	      linestr+="]";
+	  //    linestr="[";
+	      linestr=" ";
+	      //    linestr+="]";
 	      //  }
-	      /*else
-	    {
-	      tputs(tparm(cursor_address, y, x), 1, outc);
-        if (max_colors > 0) {
-            z = (int)(ranf() * max_colors);
-            if (ranf() > 0.01) {
-                tputs(tparm(set_a_foreground, z), 1, outc);
-            } else {
-                tputs(tparm(set_a_background, z), 1, outc);
-            }
-        } else if (valid(exit_attribute_mode)
-            && valid(enter_reverse_mode)) {
-            if (ranf() <= 0.01)
-                outs((ranf() > 0.6) ? enter_reverse_mode :
-                    exit_attribute_mode);
-        }	
-	      outc(p);
-      
-	      }*/
+	     
 	  linestr+=(const char *)imodule;
 	    
 	  pos=0;           //remove < ... > from text
@@ -594,6 +583,7 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
 	  linesize= linestr.size();
 	  pos=0;
 	  if (wd[vnum].textWindow!=NULL)
+	    dcolumn+=3; // compensate for versenumber XXX should vary
 	  for (i=0;i<linesize;i++)
 	    {	
 	      cwidth=wd[vnum].portx-wd[vnum].top_x-2;
@@ -603,21 +593,30 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
 		pos=i; //pos identifies the last encountered space
 	      else if (c1=='\n') 
 		{
-		  dcolumn=1;
+		  dcolumn=1;drow++;
 		} //move back to left column
 	      if (dcolumn>cwidth) 
 		{
 		  linestr[pos]='\n';
+		  drow++;
 		  dcolumn=i-pos;
 		}
 	    }
 
-	  if (wd[vnum].textWindow!=NULL)
-	    wprintw(wd[vnum].textWindow,(char *)linestr.c_str());
+	  if (wd[vnum].textWindow!=NULL)  
+	    {
+	      vdat1.row=drow;
+		vdat1.col=dcolumn;
+		wd[vnum].verseinfo.push_back(vdat1);
+		wattron(wd[vnum].textWindow,COLOR_PAIR(2));
+		wprintw(wd[vnum].textWindow,versenum);
+		wattroff(wd[vnum].textWindow,COLOR_PAIR(2));
+		wprintw(wd[vnum].textWindow,(char *)linestr.c_str());
+	    }
 	  else
 	    cout <<linestr;
-	}  //end for loop
- 
+	}  //end for loop                
+      
       key->Book(curBook);
       key->Chapter(curChapter);
       key->Verse(curVerse);

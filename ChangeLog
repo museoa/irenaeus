@@ -10,5 +10,5 @@ ChangeLog:
 24-Aug-2000  release version .12
 25-Aug-2000  initial support for running config files
 25-Aug-2000  can now display multiple windows reasonably.
-
+04-Sep-2000  support verse motion, and coloring of verse numbers
 
