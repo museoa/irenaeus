@@ -1,0 +1,9 @@
+ChangeLog:
+
+07-July-2000 Initial release
+30-July-2000 release version .11
+	fix program to update immediately on lookup.
+	fix to permit multiword searches
+01-Aug-2000	Change name from zebra to irenaeus
+06-Aug-2000	fix to lookup by 'L' top line of search result
+

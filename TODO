@@ -1,0 +1,24 @@
+ToDo
+
+Things I want to get done soon for irenaeus
+
+next release should have:
+	nicer emacs mode
+		should have an interactive interface
+		add support for greek and hebrew
+        use filters
+        finish write to personal commentary
+        help screen
+        fix bugs (numerous visual glitches)       
+
+desire for later versions:
+more windowing
+implement the options available in the sword api: searching ranges, 
+regexpr search, 
+more mouse support
+maybe a preliminary Tcl interface if it is easy to do. 
+ability to choose a reference from search list or comm/ld/text, and 
+go to the verse
+catch up in terms of functionality to what bibletime can do.
+also compatibility with bibletime would be good (read config file?).
+
