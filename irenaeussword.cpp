@@ -1,4 +1,5 @@
-/*  irenaeus
+/*  irenaeussword.cpp
+ *
  *  Copyright (C) 1999, CrossWire Bible Society
  *			P. O. Box 2528
  *			Tempe, AZ  85280-2528
@@ -28,7 +29,7 @@
 #include <stream.h>
 #include <swmgr.h>
 #include <string>
-#include "filters/plainfootnotes.h"
+#include "filters/plainfootnotes.h"    // TODO start using filters
 //#include "filters/thmlhtml.h"
 
 #include <gbfhtml.h>
@@ -36,38 +37,40 @@
 #include <plainhtml.h>
 #include <rawgbf.h>
 
-// wnat to get rid of this.  How do you do atoi in C++?
+// want to get rid of this.  How do you do atoi in C++?
 #include <stdlib.h>
 
-MainWindow::MainWindow(int rmode):ioMgr(rmode)  /* XXX ioMgr(rmode) */ {
-	mainMgr         = new irenaeusMgr();
-	int i,j;
-	for (i=0;i<NUMVWIN;i++) 
-	  for (j=0;j<NUMVWIN;j++) 
-	    linktable[i][j]=0; //all unlinked;
-	curMod           = NULL;
-	searchType=1;
-	searchParams=1;
-	setvnum(0);
-	initSWORD();
-	_moduleList = new moduledeflist;
-	getModuleList(); 
-	runmode=rmode;
+
+//Here we want to initialize the MainWindow class.  Not well named, but ok.
+
+
+MainWindow::MainWindow(int rmode):ioMgr(rmode)   
+{
+  mainMgr         = new irenaeusMgr();   
+  int i,j;
+  for (i=0;i<NUMVWIN;i++) 
+    for (j=0;j<NUMVWIN;j++) 
+      linktable[i][j]=0;           //all virtual screens unlinked;
+  curMod           = NULL;         // initially current module is null
+  searchType=1;                    // now some search settings
+  searchParams=1;
+  setvnum(0);                      //initially we start in virtual screen 0
+  initSWORD();                     // remaining sword init
+  _moduleList = new moduledeflist; //get list of available modules
+  getModuleList(); 
+  runmode=rmode;                   // set type of communication used.
 }
 
 
-MainWindow::~MainWindow() {
+MainWindow::~MainWindow()         // nothing interesting to delete
+{ }
 
-}
-
-void MainWindow::initSWORD() {
-
-  //  int viewNumber = 1;
-  //  char menuName[64];
-  ModMap::iterator it;
+void MainWindow::initSWORD() 
+{
+  ModMap::iterator it;           
   SectionMap::iterator sit;
   ConfigEntMap::iterator eit;
-  char *font;
+  char *font;                   // fonts aren't well supported here yet
   SWModule *curMod;
   VerseKey vkey();
 
@@ -84,27 +87,28 @@ void MainWindow::initSWORD() {
       if (!this->curMod)        // set currently selected module for app to first module from SWMgr (Bible Texts get first preference
         this->curMod = curMod;
     }
-                else    {
-                  //curMod->Disp(entryDisplay); // set our EntryDisp object up for the diplayer of each module other than Biblical Texts
-                  if (!strcmp((*it).second->Type(), "Commentaries")) { }
-                  if (!strcmp((*it).second->Type(), "Lexicons / Dictionaries")) { }
-                }
+    else    {
+      //curMod->Disp(entryDisplay); // set our EntryDisp object up for the diplayer of each module other than Biblical Texts
+      if (!strcmp((*it).second->Type(), "Commentaries")) { }
+      if (!strcmp((*it).second->Type(), "Lexicons / Dictionaries")) { }
+    }
   }
   if (!this->curMod)    // set currently selected module for app to first module from SWMgr
     this->curMod = curMod;
 }
 
 
-
-
 string getverse(SWModule &imodule)
 {
-return (string)(const char *)imodule;
+  return (string)(const char *)imodule;
 }
 
 
-//rely on fact that not found implies gen1:1 which is 
-//the only nonvalid postkey
+// We were asked to do a lookup on a string and the string has a hyphen
+// So we want to find exactly the range specified.  I don't see a way
+// to get sword to do this directly.  
+//
+
 VerseKey * gettextrange(string prehyp,string posthyp,SWModule &imodule)
 {
   int endv,endc;
@@ -139,68 +143,109 @@ VerseKey * gettextrange(string prehyp,string posthyp,SWModule &imodule)
 }
 
 
-void MainWindow::lookupTextChanged(string keyText) {
-  int i,j=1,tmp,modnum;
-  int linklst[NUMVWIN];
-  modnum=getvnum();
+void MainWindow::lookupTextChanged(int modnum,string keyText) 
+{
   setobjecttype(modnum,BIBLICALTEXT);
-  linklst[0]=modnum;
+  ModMap::iterator it;
+
+  it = mainMgr->Modules.find(modulename[modnum]);
+  if (it != mainMgr->Modules.end()) 
+    curMod = (*it).second;
+
+  if (curMod) {
+    unsigned int idx=keyText.find("-"); // a - indicates verse range
+    if (idx == string::npos)
+      {
+	curMod->SetKey(keyText.c_str());
+	Display(*curMod);
+      }
+    else
+      {
+	string pretext=keyText.substr(0,idx-1);
+	VerseKey *vk=gettextrange(pretext,
+				  keyText.substr(idx+1,keyText.size()),
+				  *curMod);
+	VerseKey copykey=vk->clone();
+	copykey.Chapter(vk->Chapter()); //XXX Why is this necessary
+	copykey.Verse(vk->Verse());
+	curMod->SetKey(pretext.c_str());
+	Display(*curMod,&copykey);
+      }
+  }
+      verkey[modnum]=VerseKey(keyText.c_str());
+}
+
+
+void MainWindow::lookupTextChanged(string keyText) 
+{
+  int i,j=1;
+  int tmp;
+  int linklst[NUMVWIN];  // store result of search for linking windows.
+  int modnum=getvnum();  // window with focus
+  linklst[0]=modnum;     // obviously must update window with focus
+
   for (i=0;i<NUMVWIN;i++)
     {
       tmp=linktable[modnum][i];
-      if(tmp==1)
+      if((tmp&&3)==1)
+	{
+	  linklst[j]=i;
+	  j++;  
+	}
+    }	
+  for (i=j-1;i>=0;i--)
+    { 
+      switchvirmod(linklst[i]);
+      lookupTextChanged(linklst[i],keyText);
+      panner(linklst[i],0);
+    }
+}
+
+
+void MainWindow::viewModActivate(int num,const char *modName) 
+{
+  ModMap::iterator it;
+  string text;
+  VerseKey vKey;
+
+  vKey = verkey[num];
+  text=((const char *) vKey);
+  it = mainMgr->Modules.find(modName);
+  if (it != mainMgr->Modules.end()) 
+    {
+      curMod = (*it).second;
+      curMod->SetKey(text.c_str());
+      verkey[num]=text.c_str();
+      modulename[num]=modName;
+      updateDisplay(*curMod);
+      modchanged();
+    }
+}
+
+void MainWindow::viewModActivate(const char *modName) 
+{
+  int i,j=1,tmp,modnum;
+  int linklst[NUMVWIN];
+  modnum=getvnum();
+  linklst[0]=modnum;
+
+  //linklst format is:2 least s b: {0 unlinked,1 verselink, 2 module link
+  // 3 ref to verse link} next bit is display bit
+
+  for (i=0;i<NUMVWIN;i++)
+    {
+      tmp=linktable[modnum][i];
+      if((tmp&&3)==2)
 	{
 	  linklst[j]=i;
 	  j++;  
 	}
     }
-  for (i=j-1;i>=0;i--)
+  for (i=j-1;i>=0;i--) 
     {
-      viewModActivate(modulename[i].c_str());
-      if (curMod) {
-	unsigned int idx=keyText.find("-"); // a - indicates verse range
-	if (idx == string::npos)
-	  {
-	    curMod->SetKey(keyText.c_str());
-	    Display(*curMod);
-	  }
-	else
-	  {
-	    string pretext=keyText.substr(0,idx-1);
-	    VerseKey *vk=gettextrange(pretext,
-				      keyText.substr(idx+1,keyText.size()),
-				      *curMod);
-	    VerseKey copykey=vk->clone();
-	    copykey.Chapter(vk->Chapter()); //XXX Why is this necessary
-	    copykey.Verse(vk->Verse());
-	    curMod->SetKey(pretext.c_str());
-	    Display(*curMod,&copykey);
-	  }
-      }
-      verkey[modnum]=VerseKey(keyText.c_str());
+      viewModActivate(linklst[i],modName);
+      panner(linklst[i],0);
     }
-}
-
-void MainWindow::viewModActivate(const char *modName) {
-	ModMap::iterator it;
-	string text;
-	VerseKey vKey;
-	int modnum;
-
-	modnum=getvnum();
-	//vKey = (*(SWKey *)*curMod);
-	vKey = verkey[modnum];
-	text=((const char *) vKey);
-	it = mainMgr->Modules.find(modName);
-	if (it != mainMgr->Modules.end()) {
-		curMod = (*it).second;
-		curMod->SetKey(text.c_str());
-		verkey[modnum]=text.c_str();
-		modulename[modnum]=modName;
-		//lookupTextChanged(text);
-	}
-	updateDisplay(*curMod);
-	modchanged();
 }
 
 string MainWindow::getcurverse()
@@ -245,59 +290,90 @@ void MainWindow::clearlink(int l1)
 
 void MainWindow::switchvirmod(int nm)
 {
+  ModMap::iterator it;
+  int i,tmpv;
   VerseKey vKey;
   string text;
-  
-  switchvirwin(nm);
+  for (i=0;i<NUMVWIN;i++)
+    {
+      tmpv=getlink(nm,i);
+    }
+    it = mainMgr->Modules.find(modulename[nm]);
+  if (it != mainMgr->Modules.end()) 
+      curMod = (*it).second;
+
+  setvnum(nm);
   vKey =verkey[nm];
   text=((const char *) vKey);
   curMod->SetKey(text.c_str());
 }
 
 
-void MainWindow::navigateButtonClicked(int direction) {
+void MainWindow::navigateButtonClicked(int direction) 
+{
   string text;
   VerseKey vKey;
-  int modnum=getvnum();
-
+  int i,j=1,tmp,linklst[NUMVWIN];
+  int  modnum=getvnum();
+  linklst[0]=modnum;
+  
   if (curMod) {
-    if (!strcmp(curMod->Type(), "Biblical Texts")) {
-      vKey =verkey[modnum]; //(*(SWKey *)*curMod);
-      
-      if (direction==1)		    
-	vKey.Book(vKey.Book()-1);			      
-      if (direction==2)
-	vKey.Chapter(vKey.Chapter()-1);		
-      if (direction==3)	
-	vKey.Chapter(vKey.Chapter()+1);
-      if (direction==4)		    
-	vKey.Book(vKey.Book()+1);			      
-      verkey[modnum]=vKey;
-      text=((const char *) vKey);
-      lookupTextChanged(text);
-    }
+    if (!strcmp(curMod->Type(), "Biblical Texts")) 
+      {
+	vKey =verkey[modnum]; //(*(SWKey *)*curMod);
+	
+	if (direction==1)		    
+	  vKey.Book(vKey.Book()-1);			      
+	if (direction==2)
+	  vKey.Chapter(vKey.Chapter()-1);	
+	if (direction==3)
+	  vKey.Verse(vKey.Verse()-1);	
+	if (direction==4)	
+	  vKey.Verse(vKey.Verse()+1);	
+	if (direction==5)	
+	  vKey.Chapter(vKey.Chapter()+1);
+	if (direction==6)		    
+	  vKey.Book(vKey.Book()+1);	
+	
+	for (i=0;i<NUMVWIN;i++) // want to figure out which virtual windows
+	  {                     // are verse linked to this one, and update
+	    tmp=linktable[modnum][i];   //then all
+	    if((tmp&&3)==1)
+	      {
+		linklst[j]=i;
+		j++;  
+	      }
+	  }	
+	text=((const char *) vKey); // now get the text string
+	for (i=j-1;i>=0;i--)        // update other windows
+	  {
+	    switchvirmod(linklst[i]);
+	    verkey[linklst[i]]=vKey;
+	    lookupTextChanged(linklst[i],text);
+	    panner(linklst[i],0);
+	  }
+      }
   }
-  panner(0,KEY_UP);
-}
-
+  panner(0); // make sure correct screen is on top.
+}            // TODO Really nead to keep track of how updates should be done.
 
 void MainWindow::searchButtonClicked(string srchText) { 
-	const char *resultText;
-	clearsearch();
-	int modnum=getvnum();
-	setobjecttype(modnum,SEARCHRESULT);
-	viewModActivate(modulename[modnum].c_str());
-	if (curMod) 
-	  {
-	    ListKey &searchResults = 
-		   curMod->Search(srchText.c_str(),searchType, searchParams);
+  const char *resultText;
+  clearsearch();
+  int modnum=getvnum();
+  setobjecttype(modnum,SEARCHRESULT);
+  viewModActivate(modulename[modnum].c_str());
+  if (curMod) 
+    {
+      ListKey &searchResults = 
+	curMod->Search(srchText.c_str(),searchType, searchParams);
 	    
-	    for (; !searchResults.Error(); searchResults++) {
-	    resultText = (const char *)searchResults;
-	    displaysearch(resultText);
-	    };
-	    panner(0,KEY_UP);
-	  }
+      for (; !searchResults.Error(); searchResults++) {
+	resultText = (const char *)searchResults;
+	displaysearch(resultText);
+      };
+      panner(KEY_UP);
+    }
 }
 
 
@@ -348,19 +424,19 @@ int MainWindow::getsearchParams()
 
 irenaeusMgr::irenaeusMgr() : SWMgr()
 {
-//These lines are commented because you have to change some SWORD things to usw this code.
-//This enables the filter for footnotes in plain text
+  //These lines are commented because you have to change some SWORD things to usw this code.
+  //This enables the filter for footnotes in plain text
   //SWFilter *tmpFilter = 0;
-        //      tmpFilter = new PLAINFootnotes();
-        //optionFilters.insert(FilterMap::value_type("PLAINFootnotes", tmpFilter));
-        //cleanupFilters.push_back(tmpFilter);
+  //      tmpFilter = new PLAINFootnotes();
+  //optionFilters.insert(FilterMap::value_type("PLAINFootnotes", tmpFilter));
+  //cleanupFilters.push_back(tmpFilter);
 
   //       gbftohtml       = new GBFHTML();
   //      rwptohtml       = new RWPHTML();
         //plaintohtml = new PLAINHTML();
 //      thmltohtml      = new ThMLHTML();
 
-        Load();
+  Load();
 }
 
 
@@ -372,8 +448,8 @@ irenaeusMgr::~irenaeusMgr()
   //        if (rwptohtml!=0)
   //              delete rwptohtml;
 
-	//  if (plaintohtml!=0)
-        //        delete plaintohtml;
+  //  if (plaintohtml!=0)
+  //        delete plaintohtml;
 }
 
 
@@ -382,59 +458,59 @@ irenaeusMgr::~irenaeusMgr()
 #if 0
 void irenaeusMgr::AddRenderFilters(SWModule *module, ConfigEntMap &section)
 {
-	string sourceformat;
-	string moduleDriver;
-	ConfigEntMap::iterator entry;
-	bool noDriver = true;
+  string sourceformat;
+  string moduleDriver;
+  ConfigEntMap::iterator entry;
+  bool noDriver = true;
 
-	sourceformat = ((entry = section.find("SourceType")) != section.end()) ? (*entry).second : (string) "";
-	moduleDriver = ((entry = section.find("ModDrv")) != section.end()) ? (*entry).second : (string) "";
-	// Temporary: To support old module types
-	/*	if (sourceformat.empty())	{
-		if (dynamic_cast<RawGBF *>(module))
-			sourceformat = "GBF";
+  sourceformat = ((entry = section.find("SourceType")) != section.end()) ? (*entry).second : (string) "";
+  moduleDriver = ((entry = section.find("ModDrv")) != section.end()) ? (*entry).second : (string) "";
+  // Temporary: To support old module types
+  /*	if (sourceformat.empty())	{
+	if (dynamic_cast<RawGBF *>(module))
+	sourceformat = "GBF";
 	}
 	if (!stricmp(sourceformat.c_str(), "GBF")) {
-		module->AddRenderFilter(gbftohtml);
-		noDriver = false;
+	module->AddRenderFilter(gbftohtml);
+	noDriver = false;
 	}
 	if (!stricmp(sourceformat.c_str(), "PLAIN")) {
-		module->AddRenderFilter(plaintohtml);
-		noDriver = false;
-		} */
+	module->AddRenderFilter(plaintohtml);
+	noDriver = false;
+	} */
 
-/*	if (!stricmp(sourceformat.c_str(), "ThML")) {
-		module->AddRenderFilter(thmltohtml);
-		noDriver = false;
+  /*	if (!stricmp(sourceformat.c_str(), "ThML")) {
+	module->AddRenderFilter(thmltohtml);
+	noDriver = false;
 	}    eliminated i's in stricmp's below */	
-	//	if (!strcmp(module->Name(), "-+*personal*+-")) {
-	//	module->AddRenderFilter(plaintohtml);
-	//	noDriver = false;
-	//}
-	if (!strcmp(module->Name(), "RWP")) {
-		module->AddRenderFilter(rwptohtml);
-		noDriver = false;
-	}
+  //	if (!strcmp(module->Name(), "-+*personal*+-")) {
+  //	module->AddRenderFilter(plaintohtml);
+  //	noDriver = false;
+  //}
+  if (!strcmp(module->Name(), "RWP")) {
+    module->AddRenderFilter(rwptohtml);
+    noDriver = false;
+  }
 
-	if (noDriver){
-	  //		if (!strcmp(moduleDriver.c_str(), "RawCom")) {
-	  //		module->AddRenderFilter(plaintohtml);
-	  //		noDriver = false;
-	  //	}
-	  //	if (!strcmp(moduleDriver.c_str(), "RawLD")) {
-	  //		module->AddRenderFilter(plaintohtml);
-	  //		noDriver = false;
-	  //	}
-	}
+  if (noDriver){
+    //		if (!strcmp(moduleDriver.c_str(), "RawCom")) {
+    //		module->AddRenderFilter(plaintohtml);
+    //		noDriver = false;
+    //	}
+    //	if (!strcmp(moduleDriver.c_str(), "RawLD")) {
+    //		module->AddRenderFilter(plaintohtml);
+    //		noDriver = false;
+    //	}
+  }
 	
-	/** Use PLAINHTML as standard filter, if no is specified use plaintohtml
-		* I used a profiler and saw this function eats more than 80% of the program power!
-		* We have to optimize the PLAINTOHTML filter.
-	*/
-	if (noDriver){
-	  //module->AddRenderFilter(plaintohtml);
-		noDriver = false;
-	};
+  /** Use PLAINHTML as standard filter, if no is specified use plaintohtml
+   * I used a profiler and saw this function eats more than 80% of the program power!
+   * We have to optimize the PLAINTOHTML filter.
+   */
+  if (noDriver){
+    //module->AddRenderFilter(plaintohtml);
+    noDriver = false;
+  };
 }
 
 #endif

@@ -2,7 +2,7 @@
     Eventually you will be able to edit it within Glade. */
 
 /*  irenaeus
- *  Copyright (C) <YEAR> <AUTHORS>
+ *  Copyright (C) 2000 Richard Holcombe
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -60,6 +60,7 @@ struct windat
   int portx;
   int basex;
   int basey;
+  int objecttype;
 };
 
 
@@ -70,11 +71,10 @@ class ioMgr
   int inputtype;
   int outputtype;
   windat wd[NUMVWIN];
+  int vistab[NUMVWIN][NUMVWIN];
   MENU *menuwin;
   int outlevel;
   int hascolor;
-  stringlist *_searchresult[NUMVWIN];
-  int objecttype[NUMVWIN];
 
  public:
   ioMgr(int t);
@@ -84,6 +84,7 @@ class ioMgr
   void displaymessage(string mess);
   void printwindow(string text,int winnum);
   void panner(int num,int c);
+  void panner(int c);
   void drawscreen();
   void modchanged();
   string drawmenu(moduledeflist *_moduleList);
@@ -99,6 +100,13 @@ class ioMgr
   int getvnum();
   void setvnum(int vn);
   void setobjecttype(int mnum,int objtype);
+  void setinputtype(int inptyp);
+  int getinputtype();
+  void changewindowtop(int winnum,int value);
+  void changewindowbottom(int winnum,int value);
+  void changewindowleft(int winnum,int value);
+  void changewindowright(int winnum,int value);
+
 };
 
 
@@ -134,8 +142,11 @@ public:
 	MainWindow(int rmode);
 	~MainWindow();
 	void initSWORD();
+	void lookupTextChanged(int vnum,string text);
 	void lookupTextChanged(string text);
+	void searchButtonClicked(int vnum,string response);
 	void searchButtonClicked(string response);
+	void viewModActivate(int vnum,const char *modName);
 	void viewModActivate(const char *modName);
 	void navigateButtonClicked(int direction);
 	void resultListSelectionChanged(char *clist, int row, int column);
@@ -166,9 +177,8 @@ public:
 #define BIBLICAL_TEXTS 1
 #define COMMENTARIES 2
 #define LEXICON_DICT 3
-//extern MainWindow *irenaeusWindow;
 
-#define PRINTHELP      '?'
+#define PRINT_HELP     '?'
 #define LOOKUP_STRING  'l'
 #define SEARCH_STRING  's'
 #define LOOKUP_SEARCHR 'L'
@@ -180,10 +190,13 @@ public:
 #define NEXT_BOOK      'n'
 #define PREVIOUS_CHAP  '-'
 #define NEXT_CHAP      '+'
+#define PREVIOUS_VERSE '_'
+#define NEXT_VERSE     '='
 #define SEARSCROLL_UP  'P'
 #define SEARSCROLL_DN  'N'
 #define MENU_DISPLAY   'm'
-#define PRINT_HELP     'h'
+#define READ_FILE      'r'
+
 // The way I have implemented things, any use of strings on the command
 // line needs to be inside of [ ... ]
 

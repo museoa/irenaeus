@@ -11,4 +11,4 @@ noinst_HEADERS = \
         irenaeus.h 
 
 
-CXXFLAGS = -I/usr/include/sword -g -Wall
+CXXFLAGS = -I/usr/include/sword -g -Wall -I../../../include

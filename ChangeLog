@@ -6,4 +6,9 @@ ChangeLog:
 	fix to permit multiword searches
 01-Aug-2000	Change name from zebra to irenaeus
 06-Aug-2000	fix to lookup by 'L' top line of search result
+20-Aug-2000  changed interface to virtual terminals
+24-Aug-2000  release version .12
+25-Aug-2000  initial support for running config files
+25-Aug-2000  can now display multiple windows reasonably.
+
 

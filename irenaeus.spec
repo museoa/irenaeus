@@ -5,11 +5,11 @@
 
 Summary: An ncurses front end to the sword library
 Name: irenaeus
-Version: 0.11 
+Version: 0.13 
 Release: 1 
 Copyright: GPL 
 Group: Applications 
-Source: ftp://www4.ncsu.edu/unity/users/r/raholcom/www/irenaeus/irenaeus-0.11.tar.gz 
+Source: ftp://www4.ncsu.edu/unity/users/r/raholcom/www/irenaeus/irenaeus-0.13.tar.gz 
 URL: http://www4.ncsu.edu/unity/users/r/raholcom/www/irenaeus/index.html 
 Packager: Richard Holcombe <raholcom@eos.ncsu.edu>
 
@@ -19,7 +19,7 @@ program or simply as a command line program.
 
 %prep
 rm -rf $RPM_BUILD_DIR/irenaeus
-zcat $RPM_SOURCE_DIR/irenaeus-0.11.tar.gz | tar -xvf -
+zcat $RPM_SOURCE_DIR/irenaeus-0.13.tar.gz | tar -xvf -
 
 %build
 cd /usr/src/redhat/BUILD/irenaeus
