@@ -1,6 +1,7 @@
 #include <string>
 #include "irenaeus.h"
 
+
 /* The behavior of mvhline, mvvline for negative/zero length is unspecified,
  * though we can rely on negative x/y values to stop the macro.
  */
@@ -31,23 +32,27 @@ set_terminal_modes(void)
 
 ioMgr::ioMgr(int t)
 {
-inputtype=t;
- _searchresult = new stringlist;
-// _searchresult.clear(); 
+  int i;
+  vnum=0;       
+  inputtype=t;
+  for (i=0;i<NUMVWIN;i++) 
+    {
+      _searchresult[i] = new stringlist;
+      objecttype[i]=BIBLICALTEXT;
+    }
+  // _searchresult.clear(); 
 	if (inputtype==0)
 	  {
 	    outlevel=1;
 	    initscr(); 
-	    ws[0].top_x=21;	ws[0].top_y=1;
-	    ws[0].porty=LINES-1;	ws[0].portx=COLS;
-	    ws[0].basex=0;	ws[0].basey=0;
-	    
-	    ws[1].top_x=0;	ws[1].top_y=2;
-	    ws[1].porty=LINES-1;	ws[1].portx=21;
-	    ws[1].basex=0;	ws[1].basey=0;
-	    
-	    textWindow  =newpad(1000,57);  keypad(textWindow, TRUE);
-	    searchWindow=newpad(200,40);   keypad(searchWindow, TRUE);
+	    for (i=0;i<NUMVWIN;i++)
+	      {
+		wd[i].top_x=1;	wd[i].top_y=1;
+		wd[i].porty=LINES-1;	wd[i].portx=COLS;
+		wd[i].basex=0;	wd[i].basey=0;
+		wd[i].textWindow  =newpad(1000,wd[i].portx-wd[i].top_x);  
+		keypad(wd[i].textWindow, TRUE);
+	      }
 
 	    bkgdset(BLANK);
 	    start_color();
@@ -68,12 +73,12 @@ inputtype=t;
 	if (inputtype==1)
 	  {
 	    outlevel=0;
-	    textWindow=NULL;searchWindow=NULL;
+	    for (i=0;i<NUMVWIN;i++) wd[i].textWindow=NULL;
 	  }
 	if (inputtype==2)
 	  {
 	    outlevel=0;
-	    textWindow=NULL;searchWindow=NULL;
+	    for (i=0;i<NUMVWIN;i++) wd[i].textWindow=NULL;
 	  }
 }
 
@@ -185,12 +190,11 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
   int pxmax, pymax, lowend, highend;
   int top_x,top_y,porty,portx,basex,basey;
   if (inputtype==0) {
-    top_x=ws[num].top_x;      top_y=ws[num].top_y;
-    porty=ws[num].porty;      portx=ws[num].portx;
-    basex=ws[num].basex;      basey=ws[num].basey;
+    top_x=wd[vnum].top_x;      top_y=wd[vnum].top_y;
+    porty=wd[vnum].porty;      portx=wd[vnum].portx;
+    basex=wd[vnum].basex;      basey=wd[vnum].basey;
 
-    if (num==0) tempwin=textWindow;
-    if (num==1) tempwin=searchWindow;
+    tempwin=wd[vnum].textWindow;
 
     getmaxyx(tempwin, pymax, pxmax);
     scrollok(stdscr, FALSE);	/* we don't want stdscr to scroll! */
@@ -268,9 +272,7 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
 		 porty - (pxmax > portx) - 1,
 		 portx - (pymax > porty) - 1);
 
-    ws[num].top_x=top_x;      ws[num].top_y=top_y;
-    ws[num].porty=porty;      ws[num].portx=portx;
-    ws[num].basex=basex;      ws[num].basey=basey;
+        wd[vnum].basey=basey;
 
     doupdate();
 
@@ -283,25 +285,15 @@ void ioMgr::panner(int num,int c) //num is pan number, c is direction
 void ioMgr::drawscreen()
 {
   if (inputtype ==0) {
-    int vertc=20; //char tmpbuf[80];
-    /* top of screen horizontal line */
-    //do_h_line(0,1,ACS_HLINE,COLS);
-    /* bottom of screen horizontal line */
-    //do_h_line(1,LINES,ACS_HLINE,COLS);
-    /* left of screen verticle line */
-    //do_v_line(1,1,ACS_VLINE,LINES);
-    /* right of screen verticle line */
-    //do_v_line(1,COLS,ACS_VLINE,LINES);
-    /* mid  screen verticle line */
-    do_v_line(1,vertc,ACS_VLINE,LINES);
+    //int vertc=1; //char tmpbuf[80];
 
     /* show translation */
     // strcpy(tmpbuf,curMod->Name()); 
-    mvprintw(0,30,(char *)modname.c_str());
+    mvprintw(0,25,(char *)wd[vnum].modname.c_str());
 
     /* show verse reference on top */
     // strcpy(tmpbuf,curMod->KeyText());
-    mvprintw(0,40,(char *)keyname.c_str());
+    mvprintw(0,40,(char *)wd[vnum].keyname.c_str());
     mvprintw(LINES-1,1,
 	     "s=Search,l=lookup,m=module menu, +,- chapter, n,p/N,P books/search,q=quit");
     move(2,15);
@@ -316,7 +308,6 @@ void ioMgr::modchanged()
     {
       panner(0,0);
     }
-
 }
 
 
@@ -379,9 +370,9 @@ string ioMgr::drawmenu(moduledeflist *_moduleList)
     {
       *ip = (ITEM *)0;
       m = new_menu(items);
-      set_menu_format(m, (sizeof(ip)+1)/2, 1);
+      set_menu_format(m,MENUROWS, 1);
       scale_menu(m, &mrows, &mcols);
-      menuwin = newwin(mrows + 2, mcols +  2, MENU_Y, MENU_X);
+      menuwin = newwin(mrows+2, mcols +  2, MENU_Y, MENU_X);
       set_menu_win(m, menuwin);
       keypad(menuwin, TRUE);
       box(menuwin, 0, 0);
@@ -416,24 +407,10 @@ string ioMgr::drawmenu(moduledeflist *_moduleList)
   return retstr;
 }
 
-string wordwrap(int width,string inputstr)
-{ 
-  int pos;
-  int sz = inputstr.size();
-  string line;
-
-  for (int i=width;i<sz;i+=width)
-    {
-      line=inputstr.substr(0,i);
-      pos = line.find_last_of(" \n");
-      inputstr[pos]='\n';
-    } 
-  return inputstr;
-}
 
 void ioMgr::updateDisplay(SWModule &imodule) 
 {
-  if ( textWindow!=NULL)
+  if ( wd[vnum].textWindow!=NULL)
     Display(imodule,NULL);
 }
 
@@ -457,21 +434,25 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
   string tmpType;
 
   tmpType=imodule.Type();
+
   /* get module name */
-  modname=imodule.Name(); 
+  wd[vnum].modname=imodule.Name(); 
   
   /* get verse reference */
-  keyname=imodule.KeyText();
+  wd[vnum].keyname=imodule.KeyText();
   
   if (inputtype==0) 
     {
-      wclear(textWindow);
-      wmove(textWindow,2,1);
+      wclear(wd[vnum].textWindow);
+      wmove(wd[vnum].textWindow,2,1);
     }
   
   // set recent Key
   if ((tmpType=="Biblical Texts")|(tmpType=="Commentaries")) 
     {
+      if (objecttype[vnum]==0)
+	{
+
       VerseKey *key = (VerseKey *)(SWKey *)imodule;
       int curVerse = key->Verse();
       int curChapter = key->Chapter();
@@ -535,10 +516,10 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
 
 	  linesize= linestr.size();
 	  pos=0;
-	  if (textWindow!=NULL)
+	  if (wd[vnum].textWindow!=NULL)
 	  for (i=0;i<linesize;i++)
 	    {	
-	      cwidth=56;//ws[0].top_x-ws[0].basex;
+	      cwidth=wd[vnum].portx-wd[vnum].top_x-2;
 	      c1=linestr[i];
 	      dcolumn++;
 	      if (c1==' ') 
@@ -554,8 +535,8 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
 		}
 	    }
 
-	  if (textWindow!=NULL)
-	    wprintw(textWindow,(char *)linestr.c_str());
+	  if (wd[vnum].textWindow!=NULL)
+	    wprintw(wd[vnum].textWindow,(char *)linestr.c_str());
 	  else
 	    cout <<linestr;
 	}  //end for loop
@@ -563,11 +544,27 @@ void ioMgr::Display(SWModule &imodule,VerseKey *endvkey) {
       key->Book(curBook);
       key->Chapter(curChapter);
       key->Verse(curVerse);
+	}
+      else
+	{
+	  if (objecttype[vnum]==1) 
+	    {
+	      if (inputtype==0) 
+		{
+		  int n;
+		  list<string>::iterator sn;
+		  n=wd[1].basey;
+		  for (sn=_searchresult[vnum]->begin();
+		       sn!=_searchresult[vnum]->end();++sn)
+		    displaysearch((*sn).c_str());
+		}
+	    }
+	}
     } //end if bible or commentray
   else 
     {
       if (inputtype==0) 
-	wprintw(textWindow,"%s",(const char *)imodule);
+	wprintw(wd[vnum].textWindow,"%s",(const char *)imodule);
       else cout<<(const char *)imodule;
     }
 }
@@ -581,41 +578,112 @@ void ioMgr::displayverse(string Text)
   else cout<<Text;
 }
 */
-string ioMgr::gettopsearch()
+VerseKey ioMgr::gettopsearch()
 {
-  string returnstr="";
+  list<string>::iterator sn;
+  string retstr;
+  string tmpstr;
   if (inputtype==0) 
     {
       int n;
-      list<string>::iterator sn;
-      n=ws[1].basey;
+      n=wd[vnum].basey;
       int i=0;
-      for (sn=_searchresult->begin();i<n;++sn)
+      for (sn=_searchresult[vnum]->begin();i<n-1;++sn)
 	i++;
-      return(*sn);
+      tmpstr=*sn;
+      //retstr="Lev4:5";
+      //retstr.replace(0,tmpstring.size(),tmpstring);
+
     }
-  return(returnstr);
+  VerseKey vk=tmpstr.c_str();
+  return vk;
 }
+
 
 void ioMgr::displaysearch(string Text)
 { 
+
   if (inputtype==0) 
-    wprintw(searchWindow,"%s\n",Text.c_str());
+    wprintw(wd[vnum].textWindow,"%s\n",Text.c_str());
   else cout<<Text.c_str()<<"\n";
 
-  _searchresult->push_back(Text);
+  _searchresult[vnum]->push_back(Text);
 }
 
-
+/*
+void ioMgr::displaysearch()
+{ 
+  list<string>::iterator sn;
+  string Text="";
+  for (sn=_searchresult[vnum]->begin();sn!=_searchresult[vnum]->end();sn++)
+    {
+      Text=sn;
+      if (inputtype==0) 
+	wprintw(wd[vnum].textWindow,"%s\n",Text.c_str());
+      else cout<<Text.c_str()<<"\n";
+      
+      _searchresult->push_back(Text);
+    }
+}
+*/
 void ioMgr::clearsearch()
 { 
   if (inputtype==0) 
     {   
-      wclear(searchWindow);
-      wrefresh(searchWindow);
+      wclear(wd[vnum].textWindow);
+      wrefresh(wd[vnum].textWindow);
     }
-  _searchresult->clear();
+  _searchresult[vnum]->clear();
+}
+
+void ioMgr::switchvirwin(int wn)
+{ 
+  if (vnum!=wn)
+    {   
+      vnum=wn;
+      if (inputtype==0) 
+        {   
+          erase();
+          refresh();
+          panner(0,0);
+        }
+    }
+}
+
+void ioMgr::setvnum(int vn)
+{ 
+  if ((vn>-1)&(vn<NUMVWIN))
+    {   
+      vnum=vn;
+      if (inputtype==0) 
+	{   
+	  erase();
+	  refresh();
+	}
+      panner(0,0);
+    }
+}
+
+int ioMgr::getvnum()
+{ 
+  return vnum;
 }
 
 
+void ioMgr::popwin(string msg)
+{
+      WINDOW *win;       
+      win=newwin(20,70,0,0);
+      wclear(win);
+      attron(A_REVERSE);
+      mvwprintw(win,2,2,(char *)msg.c_str()); 
+      attroff(A_REVERSE);
+      echo();
+      wrefresh(win);
+}
 
+void ioMgr::setobjecttype(int mnum,int objtype)
+{
+  if ((mnum>-1)&(mnum<NUMVWIN))
+  objecttype[mnum]=objtype;
+}

@@ -40,13 +40,16 @@
 #include <stdlib.h>
 
 MainWindow::MainWindow(int rmode):ioMgr(rmode)  /* XXX ioMgr(rmode) */ {
-	mainMgr          = new irenaeusMgr();
-		curMod           = NULL;
-		//chapDisplay      = 0;	// set in create
-		//entryDisplay     = 0;	// set in create
+	mainMgr         = new irenaeusMgr();
+	int i,j;
+	for (i=0;i<NUMVWIN;i++) 
+	  for (j=0;j<NUMVWIN;j++) 
+	    linktable[i][j]=0; //all unlinked;
+	curMod           = NULL;
+	searchType=1;
+	searchParams=1;
+	setvnum(0);
 	initSWORD();
-	//chapDisplay = new ChapDisp("");
-	//entryDisplay = new EntryDisp("");
 	_moduleList = new moduledeflist;
 	getModuleList(); 
 	runmode=rmode;
@@ -54,12 +57,8 @@ MainWindow::MainWindow(int rmode):ioMgr(rmode)  /* XXX ioMgr(rmode) */ {
 
 
 MainWindow::~MainWindow() {
-  /*	if (chapDisplay)
-		delete chapDisplay;
-	if (entryDisplay)
-	delete entryDisplay; */
-}
 
+}
 
 void MainWindow::initSWORD() {
 
@@ -71,29 +70,31 @@ void MainWindow::initSWORD() {
   char *font;
   SWModule *curMod;
   VerseKey vkey();
-  
+
   for (it = mainMgr->Modules.begin(); it != mainMgr->Modules.end(); it++) {
     curMod = (*it).second;
-    if (!strcmp((*it).second->Type(), "Biblical Texts")) {      
+    if (!strcmp((*it).second->Type(), "Biblical Texts")) {
       font = 0;
       if ((sit = mainMgr->config->Sections.find((*it).second->Name())) != mainMgr->config->Sections.end()) {
-	if ((eit = (*sit).second.find("Font")) != (*sit).second.end()) {
-	  font = (char *)(*eit).second.c_str();
-	}
+        if ((eit = (*sit).second.find("Font")) != (*sit).second.end()) {
+          font = (char *)(*eit).second.c_str();
+        }
       }
-      //curMod->Disp(chapDisplay);	// set our ChapDisp object up for the diplayer of each Biblical Text module
-      if (!this->curMod) 	// set currently selected module for app to first module from SWMgr (Bible Texts get first preference
-	this->curMod = curMod;
+      //curMod->Disp(chapDisplay);      // set our ChapDisp object up for the diplayer of each Biblical Text module
+      if (!this->curMod)        // set currently selected module for app to first module from SWMgr (Bible Texts get first preference
+        this->curMod = curMod;
     }
-		else	{
-		  //curMod->Disp(entryDisplay);	// set our EntryDisp object up for the diplayer of each module other than Biblical Texts
-		  if (!strcmp((*it).second->Type(), "Commentaries")) { }
-		  if (!strcmp((*it).second->Type(), "Lexicons / Dictionaries")) { }
-		}
+                else    {
+                  //curMod->Disp(entryDisplay); // set our EntryDisp object up for the diplayer of each module other than Biblical Texts
+                  if (!strcmp((*it).second->Type(), "Commentaries")) { }
+                  if (!strcmp((*it).second->Type(), "Lexicons / Dictionaries")) { }
+                }
   }
-  if (!this->curMod) 	// set currently selected module for app to first module from SWMgr
+  if (!this->curMod)    // set currently selected module for app to first module from SWMgr
     this->curMod = curMod;
 }
+
+
 
 
 string getverse(SWModule &imodule)
@@ -139,40 +140,63 @@ VerseKey * gettextrange(string prehyp,string posthyp,SWModule &imodule)
 
 
 void MainWindow::lookupTextChanged(string keyText) {
-	if (curMod) {
-	  unsigned int idx=keyText.find("-"); // a - indicates verse range
-	  if (idx == string::npos)
-	    {
-	  curMod->SetKey(keyText.c_str());
-	  Display(*curMod);
-	    }
-	  else
-	    {
-	      string pretext=keyText.substr(0,idx-1);
-	      VerseKey *vk=gettextrange(pretext,
-			   keyText.substr(idx+1,keyText.size()),*curMod);
-	      VerseKey copykey=vk->clone();
-	      copykey.Chapter(vk->Chapter()); //XXX Why is this necessary
-	      copykey.Verse(vk->Verse());
-	      curMod->SetKey(pretext.c_str());
-	      Display(*curMod,&copykey);
-	    }
+  int i,j=1,tmp,modnum;
+  int linklst[NUMVWIN];
+  modnum=getvnum();
+  setobjecttype(modnum,BIBLICALTEXT);
+  linklst[0]=modnum;
+  for (i=0;i<NUMVWIN;i++)
+    {
+      tmp=linktable[modnum][i];
+      if(tmp==1)
+	{
+	  linklst[j]=i;
+	  j++;  
 	}
-	vkey=new VerseKey(keyText.c_str());
-	
+    }
+  for (i=j-1;i>=0;i--)
+    {
+      viewModActivate(modulename[i].c_str());
+      if (curMod) {
+	unsigned int idx=keyText.find("-"); // a - indicates verse range
+	if (idx == string::npos)
+	  {
+	    curMod->SetKey(keyText.c_str());
+	    Display(*curMod);
+	  }
+	else
+	  {
+	    string pretext=keyText.substr(0,idx-1);
+	    VerseKey *vk=gettextrange(pretext,
+				      keyText.substr(idx+1,keyText.size()),
+				      *curMod);
+	    VerseKey copykey=vk->clone();
+	    copykey.Chapter(vk->Chapter()); //XXX Why is this necessary
+	    copykey.Verse(vk->Verse());
+	    curMod->SetKey(pretext.c_str());
+	    Display(*curMod,&copykey);
+	  }
+      }
+      verkey[modnum]=VerseKey(keyText.c_str());
+    }
 }
 
 void MainWindow::viewModActivate(const char *modName) {
 	ModMap::iterator it;
 	string text;
 	VerseKey vKey;
+	int modnum;
 
-	vKey = (*(SWKey *)*curMod);		      
+	modnum=getvnum();
+	//vKey = (*(SWKey *)*curMod);
+	vKey = verkey[modnum];
 	text=((const char *) vKey);
 	it = mainMgr->Modules.find(modName);
 	if (it != mainMgr->Modules.end()) {
 		curMod = (*it).second;
 		curMod->SetKey(text.c_str());
+		verkey[modnum]=text.c_str();
+		modulename[modnum]=modName;
 		//lookupTextChanged(text);
 	}
 	updateDisplay(*curMod);
@@ -188,12 +212,57 @@ string MainWindow::getcurverse()
   return (text);
 }
 
+
+int MainWindow::linkscr(int l1,int l2,int val)
+{
+  int retval=-1;
+  if ((l1>-1)&(l1<NUMVWIN)&(l2>-1)&(l2<NUMVWIN)) 
+    {
+      linktable[l1][l2]=val;
+      linktable[l2][l1]=val;
+      retval=0;
+    }
+  return retval;
+}
+
+int MainWindow::getlink(int l1,int l2)
+{
+  int retval=0;
+  retval=linktable[l1][l2];
+  return(retval);
+}
+
+void MainWindow::clearlink(int l1)
+{
+  int i;
+  for (i=0;i<NUMVWIN;i++)
+    {
+      linktable[l1][i]=0;
+      linktable[i][l1]=0;
+    }
+}
+
+
+void MainWindow::switchvirmod(int nm)
+{
+  VerseKey vKey;
+  string text;
+  
+  switchvirwin(nm);
+  vKey =verkey[nm];
+  text=((const char *) vKey);
+  curMod->SetKey(text.c_str());
+}
+
+
 void MainWindow::navigateButtonClicked(int direction) {
   string text;
   VerseKey vKey;
+  int modnum=getvnum();
+
   if (curMod) {
     if (!strcmp(curMod->Type(), "Biblical Texts")) {
-      vKey = (*(SWKey *)*curMod);
+      vKey =verkey[modnum]; //(*(SWKey *)*curMod);
       
       if (direction==1)		    
 	vKey.Book(vKey.Book()-1);			      
@@ -203,6 +272,7 @@ void MainWindow::navigateButtonClicked(int direction) {
 	vKey.Chapter(vKey.Chapter()+1);
       if (direction==4)		    
 	vKey.Book(vKey.Book()+1);			      
+      verkey[modnum]=vKey;
       text=((const char *) vKey);
       lookupTextChanged(text);
     }
@@ -214,10 +284,11 @@ void MainWindow::navigateButtonClicked(int direction) {
 void MainWindow::searchButtonClicked(string srchText) { 
 	const char *resultText;
 	clearsearch();
+	int modnum=getvnum();
+	setobjecttype(modnum,SEARCHRESULT);
+	viewModActivate(modulename[modnum].c_str());
 	if (curMod) 
 	  {
-	    int searchType = 1,
-	      searchParams = 1;
 	    ListKey &searchResults = 
 		   curMod->Search(srchText.c_str(),searchType, searchParams);
 	    
@@ -225,16 +296,10 @@ void MainWindow::searchButtonClicked(string srchText) {
 	    resultText = (const char *)searchResults;
 	    displaysearch(resultText);
 	    };
-	    panner(1,KEY_UP);
+	    panner(0,KEY_UP);
 	  }
 }
 
-/*
-char EntryDisp::Display(WINDOW *win,SWModule &imodule) {
-
-	(const char *)imodule;	// snap to entry
-	wprintw(win,"[%s] ", imodule.KeyText());
-	}*/
 
 
 moduledeflist * MainWindow::getModuleList()
@@ -258,6 +323,26 @@ moduledeflist * MainWindow::getModuleList()
     }
   moduledeflist *rmoddef=_moduleList;
   return rmoddef;
+}
+
+void MainWindow::setsearchType(int st)
+{
+  searchType=st;
+}
+
+void MainWindow::setsearchParams(int sp)
+{
+  searchParams=sp;
+}
+
+int MainWindow::getsearchType()
+{
+  return searchType;
+}
+
+int MainWindow::getsearchParams()
+{
+  return searchParams;
 }
 
 
@@ -290,6 +375,9 @@ irenaeusMgr::~irenaeusMgr()
 	//  if (plaintohtml!=0)
         //        delete plaintohtml;
 }
+
+
+
 
 #if 0
 void irenaeusMgr::AddRenderFilters(SWModule *module, ConfigEntMap &section)

@@ -30,16 +30,30 @@
 #include <menu.h>
 #include <stream.h>
 
+#define NUMVWIN 10
+#define MENUROWS 9
+
+//object types
+#define BIBLICALTEXT 0
+#define SEARCHRESULT 1
+
 struct moduledef
 {
-        string custom; // unused now, but available field for others to use
-        string name;
-        string description;
-        string type;
+  string custom; // unused now, but available field for others to use
+  string name;
+  string description;
+  string type;
 };
 
-struct winsides
+typedef list<moduledef> moduledeflist;
+typedef list<string> stringlist;
+
+struct windat
 {
+  WINDOW *textWindow;
+  string modname;
+  string keyname;
+  stringlist *_searchresult;
   int top_x;
   int top_y;
   int porty;
@@ -48,26 +62,19 @@ struct winsides
   int basey;
 };
 
-typedef list<moduledef> moduledeflist;
-typedef list<string> stringlist;
-
-//class dispwin
-//{}
 
 class ioMgr
 {
  private:
+  int vnum;
   int inputtype;
   int outputtype;
-  WINDOW *textWindow;
-  WINDOW *searchWindow;
+  windat wd[NUMVWIN];
   MENU *menuwin;
-  winsides ws[2];
-  string modname;
-  string keyname;
   int outlevel;
   int hascolor;
-  stringlist *_searchresult;
+  stringlist *_searchresult[NUMVWIN];
+  int objecttype[NUMVWIN];
 
  public:
   ioMgr(int t);
@@ -85,9 +92,13 @@ class ioMgr
   void updateDisplay(SWModule &imodule);
   void displayverse(string Text);
   void displaysearch(string Text);
-  string gettopsearch();
+  VerseKey gettopsearch();
   void clearsearch();
-
+  void switchvirwin(int wn);
+  void popwin(string msg);
+  int getvnum();
+  void setvnum(int vn);
+  void setobjecttype(int mnum,int objtype);
 };
 
 
@@ -105,30 +116,21 @@ public:
         virtual ~irenaeusMgr();
 };
 
-/*
-class EntryDisp : public SWDisplay {
-protected:
-	string Text;
-public:
-	EntryDisp(string Text) { this->Text = Text; }
-	virtual char Display(WINDOW *win,SWModule &imodule);
-};
-
-class ChapDisp : public EntryDisp {
-public:
-	ChapDisp(string Text) : EntryDisp(Text) {}
-	virtual char Display(WINDOW *win,SWModule &imodule);
-	}; */
 
 class MainWindow : public ioMgr {
-	int mrows,mcols,c,runmode;
+	int mrows;
+	int mcols;
+	int c;
+	int runmode;
 	irenaeusMgr *mainMgr;
 	SWModule *curMod;
-	VerseKey *vkey;
+	VerseKey verkey[NUMVWIN];
+	string  modulename[NUMVWIN];
+	int searchType;
+	int searchParams;
 	moduledeflist *_moduleList;
-
+	int linktable[NUMVWIN][NUMVWIN];
 public:
-
 	MainWindow(int rmode);
 	~MainWindow();
 	void initSWORD();
@@ -140,9 +142,17 @@ public:
 	moduledeflist *getModuleList();
 	string listmodules(string mtype);
 	string getcurverse();
+	int linkscr(int l1,int l2,int val);
+	int getlink(int l1,int l2);
+	void clearlink(int l1);
+	void switchvirmod(int mn);
 	void AddRenderFilters(SWModule *module, ConfigEntMap &section);
 	void PersonalCommentAdd(const string &modName, const string &startVerse, const string &stopVerse, const string &comment);
 	void PersonalCommentRemove(const string &modName, const string &startVerse, const string &stopVerse);
+	void setsearchType(int st);
+	void setsearchParams(int sp);
+	int getsearchType();
+	int getsearchParams();
 };
 
 #define BLANK		' '	
@@ -173,7 +183,7 @@ public:
 #define SEARSCROLL_UP  'P'
 #define SEARSCROLL_DN  'N'
 #define MENU_DISPLAY   'm'
-
+#define PRINT_HELP     'h'
 // The way I have implemented things, any use of strings on the command
 // line needs to be inside of [ ... ]
 

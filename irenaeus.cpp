@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 1998,1999 Free Software Foundation, Inc.                   *
+ * Copyright (c) 2000 Free Software Foundation, Inc.                        *
  *                                                                          *
  * Permission is hereby granted, free of charge, to any person obtaining a  *
  * copy of this software and associated documentation files (the            *
@@ -50,7 +50,7 @@ AUTHOR
 #include <getopt.h>
 #include <fstream>
 
-
+/*
 #ifdef NCURSES_MOUSE_VERSION
 static const char *mouse_decode(MEVENT const *ep)
 {
@@ -65,8 +65,8 @@ static const char *mouse_decode(MEVENT const *ep)
 	(void) strcat(buf, "}");
 	return(buf);
 }
-#endif /* NCURSES_MOUSE_VERSION */
-
+#endif // NCURSES_MOUSE_VERSION 
+*/
 
 #define FRAME struct frame
 FRAME
@@ -86,31 +86,19 @@ string MainWindow::listmodules(string mtype)
 
     compstr=mtype;
     if (mtype=="1") compstr="Biblical Texts";
-    else if (mtype=="2") compstr="Commentaries";
-    else if (mtype=="3") compstr="Lexicons / Dictionaries";
+    else 
+      if (mtype=="2") compstr="Commentaries";
+      else 
+	if (mtype=="3") compstr="Lexicons / Dictionaries";
 
-for (it=_moduleList->begin(); it!=_moduleList->end(); it++)
-        {
-	  if (it->type==compstr)
-	    namelst += it->name+" ";
+    for (it=_moduleList->begin(); it!=_moduleList->end(); it++)
+      {
+	if (it->type==compstr)
+	  namelst += it->name+" ";
                 //text = md->name + " (" + md->description + ")";
-	}
- cout<<namelst; //for testing only
- return namelst;
+      }
+    return namelst;
 }
-
-static void ShellOut(bool message)
-{
-        if (message)
-                addstr("Shelling out...");
-        def_prog_mode();
-        endwin();
-        system("sh");
-        if (message)
-                addstr("returned from shellout.\n");
-        refresh();
-}
-
 
 
 string editfile(string fname)
@@ -121,7 +109,8 @@ string editfile(string fname)
   retstr="Initial value of string";
   //def_prog_mode();
   //endwin();
-  callstr="emacs "+fname;
+  callstr="vi "+fname;
+  //callstr="emacs "+fname;
   system(callstr.c_str()); //call editor with specified file
   // now read in file, and return it
   ifstream in1(fname.c_str());
@@ -144,23 +133,6 @@ void usage()
 int runmode=0;
 
 
-/*
-void printhelp()
-{
-      WINDOW *win;       
-      win=newwin(20,70,0,0);
-      wclear(win);
-      attron(A_REVERSE);
-      mvwprintw(win,2,2,"This is the help screen"); 
-      mvwprintw(win,3,2,"Not very helpful yet"); 
-      mvwprintw(win,4,2,"Press a key to continue"); 
-      attroff(A_REVERSE);
-      echo();
-      wrefresh(win);
-      string s;
-      //getnextchar(s,1);
-};
-*/
 
 void parsepc(MainWindow *mw, string str)
 {
@@ -177,8 +149,25 @@ int main(int argc, char *argv[])
   
   int c=0,my_e_param = 1,inputlen;
   unsigned int pos=0;
-  string inputstring,historystring,swstr,commstr; 
+  VerseKey vk;
+  string inputstring,historystring,swstr,commstr,tmpstr; 
     string response;
+    tmpstr="Ex2:3                           ";
+    string helpstr="Irenaeus keybindings ";
+    helpstr+='\n';
+    helpstr+="help screen         ";helpstr+=PRINTHELP;helpstr+="     ";
+    helpstr+="lookup ref.         ";helpstr+=LOOKUP_STRING;helpstr+='\n';
+    helpstr+="search for string   ";helpstr+=SEARCH_STRING;helpstr+="     ";
+    helpstr+="lookup from search  ";helpstr+=LOOKUP_SEARCHR;helpstr+='\n';
+    helpstr+="write personal com  ";helpstr+=WRITE_PC;helpstr+="     ";
+    helpstr+="change module       ";helpstr+=SET_MODULE;helpstr+='\n';
+    helpstr+="list modules        ";helpstr+=LIST_MODULES;helpstr+="     ";
+    helpstr+="change parameters   ";helpstr+=PARAM_CHANGE;helpstr+='\n';
+    helpstr+="previous book       ";helpstr+=PREVIOUS_BOOK;helpstr+="     ";
+    helpstr+="next book           ";helpstr+=NEXT_BOOK;helpstr+='\n';
+    helpstr+="previous chapter    ";helpstr+=PREVIOUS_CHAP;helpstr+="     ";
+    helpstr+="next chapter        ";helpstr+=NEXT_CHAP;helpstr+='\n';
+    helpstr+="change module(menu) ";helpstr+=MENU_DISPLAY;helpstr+="     ";
 
   for (int i=1;i<argc;i++)
    { 
@@ -220,26 +209,43 @@ int main(int argc, char *argv[])
   
     if (runmode==0) //initial screen if ncurses mode
       {
-	mw->lookupTextChanged("Mat1:1");
-	mw->panner(0,0);
-	mw->drawscreen();
+	mw->switchvirwin(9);
+	mw->lookupTextChanged("Mat1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(8);
+	mw->lookupTextChanged("Rev1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(7);
+	mw->lookupTextChanged("Luke1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(6);
+	mw->lookupTextChanged("John1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(5);
+	mw->lookupTextChanged("Psalm1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(4);
+	mw->lookupTextChanged("Romans1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(3);
+	mw->lookupTextChanged("Phili1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(2);
+	mw->lookupTextChanged("galat1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(1);
+	mw->lookupTextChanged("1John1:1");mw->panner(0,0);mw->drawscreen();
+	mw->switchvirwin(0);
+	mw->lookupTextChanged("Jude1:1");mw->panner(0,0);mw->drawscreen();
       }  
 
   c = mw->getnextchar(inputstring,pos);
     do {
       pos+=2;
         switch(c)
-        {
-	// case PRINTHELP: //'?'printhelp();mw->drawscreen();break; 
+        {	
 	case LOOKUP_STRING: //'l'
           response=mw->querystr("Lookup reference",inputstring,pos);
           pos+=response.size()+1;
 	  mw->lookupTextChanged(response);
-	  mw->panner(0,KEY_UP); mw->drawscreen(); 
+	  mw->panner(0,0); mw->drawscreen(); 
 	  break;
 	case LOOKUP_SEARCHR: //'L'
-	  mw->lookupTextChanged(mw->gettopsearch());
-	  mw->panner(0,KEY_UP); mw->drawscreen(); 
+	  vk=mw->gettopsearch();
+	  mw->lookupTextChanged((const char *) vk);
+	  mw->panner(0,0); mw->drawscreen(); 
 	  break;
 	case SEARCH_STRING: //'s'
 	  response=mw->querystr("Search string",inputstring,pos);
@@ -256,12 +262,12 @@ int main(int argc, char *argv[])
 				 commstr);
 	  //mw->PersonalCommentAdd("-+*Personal*+-","Matthew1:1","Matthew1:5","This is an inline test");
 	  break;
-	case SET_MODULE: // 'M'
+	case SET_MODULE: // 'M' enter module choice
 	  response=mw->querystr("Module name",inputstring,pos);
 	  mw->viewModActivate(response.c_str());
 	  pos+=response.size()+1;
 	  break;
-	case PARAM_CHANGE: // 'D'
+	case PARAM_CHANGE: // 'D' //change global variables
 	  response=mw->querystr("change which, to what",inputstring,pos);
 	  parsepc(mw,response);
 	  pos+=response.size()+1;
@@ -271,7 +277,6 @@ int main(int argc, char *argv[])
 	  mw->listmodules(response);
 	  pos+=response.size()+1;
 	  break;
-
         case KEY_UP:    // pan upwards 
 	  mw->panner(0,KEY_UP);
 	  mw->drawscreen();
@@ -292,16 +297,50 @@ int main(int argc, char *argv[])
 	case NEXT_BOOK:	//  'n' next book 
 	  mw->navigateButtonClicked(4);
 	  break;
+/* this should be obsolete now
 	case SEARSCROLL_UP:	// 'P' prev search result 
 	  mw->panner(1,KEY_UP);
 	  break;
 	case SEARSCROLL_DN:	// 'N' next search result 
 	  mw->panner(1,KEY_DOWN);
-	  break;
+	  break; */
 	case MENU_DISPLAY:	// 'm' menu 
 	  //mw->drawmenu(mw->getModuleList()); // one to represent text type
 	  mw->viewModActivate((mw->drawmenu(mw->getModuleList())).c_str());
 	  //drawmenu(mw,1); // one to represent text type 
+	  break;
+	case PRINT_HELP:      // 'h' help screen
+	  mw->popwin(helpstr);
+	  break;
+	case '0':
+	  mw->switchvirmod(0);
+	  break;
+	case '1':
+	  mw->switchvirmod(1);
+	  break;
+	case '2':
+	  mw->switchvirmod(2);
+	  break;
+	case '3':
+	  mw->switchvirmod(3);
+	  break;
+	case '4':
+	  mw->switchvirmod(4);
+	  break;
+	case '5':
+	  mw->switchvirmod(5);
+	  break;
+	case '6':
+	  mw->switchvirmod(6);
+	  break;
+	case '7':
+	  mw->switchvirmod(7);
+	  break;
+	case '8':
+	  mw->switchvirmod(8);
+	  break;
+	case '9':
+	  mw->switchvirmod(9);
 	  break;
 
 	default:
@@ -312,7 +351,7 @@ int main(int argc, char *argv[])
     } while
         ((c = mw->getnextchar(inputstring,pos)) != 'q');
 
-    mw->~MainWindow();
+//    mw->~MainWindow();
     endwin();
 
     return (EXIT_SUCCESS);

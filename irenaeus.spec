@@ -60,6 +60,9 @@ rm -rf $RPM_BUILD_ROOT
 /usr/src/redhat/BUILD/irenaeus/configure.in  
 /usr/src/redhat/BUILD/irenaeus/missing	  
 /usr/src/redhat/BUILD/irenaeus/irenaeus.h
+/usr/src/redhat/BUILD/irenaeus/test/test.sh
+/usr/src/redhat/BUILD/irenaeus/test/testout.dat
+
 
 /usr/local/bin/irenaeus
 
