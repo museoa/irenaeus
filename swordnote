@@ -1,0 +1,30 @@
+here is much work that should be done to the code.
+
+example:
+
+Can someone explain why, if I declare and construct a VerseKey *vk
+and then do a:
+
+VerseKey copykey=vk->clone();
+
+or even
+
+VerseKey copykey=vk;
+
+All the information from vk is copied to copykey, except that chapter
+and verse are set to 1.  The Book number, and everything else gets copied
+to copykey.
+So right now I have in my code, the very ugly:
+
+VerseKey copykey=vk->clone();
+copykey.Chapter(vk->Chapter());
+copykey.Verse(vk->Verse());
+
+
+
+Is there any interest or effort in having sword compile for other machines?
+It sounded like there was interest in palm, but what about other
+operating systems like : mac os, bsd, solaris...
+
+
+

@@ -1,0 +1,10 @@
+make distclean
+cd ..
+tar -cvf zebra-vn.tar zebra
+gzip zebra-vn.tar
+su root
+cp /home/raholcom/zebra/zebra-vn.tar.gz /usr/src/redhat/SOURCES
+cd /usr/src/redhat/SPECS
+rpm -ba zebra.spec
+exit
+ftpncsu -----rpm,src,tgz files

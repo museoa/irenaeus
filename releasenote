@@ -1,0 +1,35 @@
+Help on the curses port is very much wanted.
+
+Earlier I posted to this mailing list about this port.  Here is what I have
+changed since my last post:
+
+I realized that the choice of names 'zebra' is confusing or ambigous because
+of other software by that name.  So instead I would like to call it 
+'irenaeus' so there will be no confusion in the future.
+
+Well, I fixed some of the glitches in the program, although there
+are still several that I need to fix.  Now  multi-word searches should work.
+Now there is a way to do a lookup from the results of a search.
+
+So I have thrown together a program that needs lots of work. 
+
+  Although it is a curses port, I would like to have it continue to support 
+command line and cin/cout types of interfaces.  This permits its use and 
+interaction with other programs.  The first example that I have, is an emacs 
+mode. I have included an emacs mode (sword.el) that will call the irenaeus 
+program and insert the returned bible verse, or list of references.
+I have started working on an interactive interface (swordint.el) that
+uses comint to pipe information between a running process, and an emacs 
+buffer. (it doesn't work yet.)  So it uses emacs as a front end, and just
+passes on the commands.  The advantage of this is to use all of software
+for some well developed programs and have it easily integrate with sword.
+(Has anyone here worked with Mule (part of emacs supporting other languages
+fonts).)
+
+I still don't have the write to commentary stuff working yet.
+
+so I have the updated code at 
+http://www4.ncsu.edu/unity/users/r/raholcom/www/irenaeus/index.html
+
+Should I set up a CVS repository?  Any preferences on how collaboration
+is done?
